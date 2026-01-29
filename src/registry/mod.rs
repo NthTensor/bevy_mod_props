@@ -45,9 +45,9 @@ use bevy_ecs::{
     resource::Resource,
     world::{DeferredWorld, World},
 };
+use estr::{Estr, EstrMap};
 pub use ext::*;
 use thiserror::Error;
-use ustr::{Ustr, UstrMap};
 
 // -----------------------------------------------------------------------------
 // Errors
@@ -57,7 +57,7 @@ use ustr::{Ustr, UstrMap};
     "error inserting `Identity` component: name {name} requested by {requester} already in use by {owner}"
 )]
 pub struct NameTakenError {
-    name: Ustr,
+    name: Estr,
     owner: Entity,
     requester: Entity,
 }
@@ -65,7 +65,7 @@ pub struct NameTakenError {
 #[derive(Debug, Error)]
 #[error("no entity found with name '{name}'")]
 pub struct EntityNotFoundError {
-    name: Ustr,
+    name: Estr,
 }
 
 // -----------------------------------------------------------------------------
@@ -80,10 +80,10 @@ pub struct EntityNotFoundError {
 #[component(immutable)]
 #[component(on_insert = Identity::on_insert)]
 #[component(on_replace = Identity::on_replace)]
-pub struct Identity(Ustr);
+pub struct Identity(Estr);
 
 impl Identity {
-    pub fn new(str: impl Into<Ustr>) -> Identity {
+    pub fn new(str: impl Into<Estr>) -> Identity {
         Identity(str.into())
     }
 
@@ -171,7 +171,7 @@ impl Identity {
 }
 
 impl Deref for Identity {
-    type Target = Ustr;
+    type Target = Estr;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -189,10 +189,10 @@ impl Deref for Identity {
 #[component(immutable)]
 #[component(on_insert = Class::on_insert)]
 #[component(on_replace = Class::on_replace)]
-pub struct Class(Ustr);
+pub struct Class(Estr);
 
 impl Class {
-    pub fn new(str: impl Into<Ustr>) -> Class {
+    pub fn new(str: impl Into<Estr>) -> Class {
         Class(str.into())
     }
 
@@ -238,7 +238,7 @@ impl Class {
 }
 
 impl Deref for Class {
-    type Target = Ustr;
+    type Target = Estr;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -255,20 +255,20 @@ static EMPTY_REG: LazyLock<EntityRegistration> = LazyLock::new(EntityRegistratio
 /// Stores mappings from names and classes to entities.
 #[derive(Resource, Default)]
 pub struct Registry {
-    named_entities: UstrMap<Entity>,
-    entity_classes: UstrMap<EntityHashSet>,
+    named_entities: EstrMap<Entity>,
+    entity_classes: EstrMap<EntityHashSet>,
     reigrations: EntityHashMap<EntityRegistration>,
 }
 
 /// Stores name and class info about a specific entity.
 #[derive(Default)]
 pub struct EntityRegistration {
-    pub name: Option<Ustr>,
-    pub class: Option<Ustr>,
+    pub name: Option<Estr>,
+    pub class: Option<Estr>,
 }
 
 impl Registry {
-    pub fn lookup_name(&self, name: impl Into<Ustr>) -> Result<Entity, EntityNotFoundError> {
+    pub fn lookup_name(&self, name: impl Into<Estr>) -> Result<Entity, EntityNotFoundError> {
         let name = name.into();
         self.named_entities
             .get(&name)
@@ -276,7 +276,7 @@ impl Registry {
             .ok_or(EntityNotFoundError { name })
     }
 
-    pub fn lookup_class(&self, class: impl Into<Ustr>) -> &EntityHashSet {
+    pub fn lookup_class(&self, class: impl Into<Estr>) -> &EntityHashSet {
         self.entity_classes
             .get(&class.into())
             .unwrap_or(&*EMPTY_SET)

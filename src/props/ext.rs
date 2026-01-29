@@ -6,7 +6,7 @@ use bevy_ecs::{
     system::{Commands, EntityCommands},
     world::{DeferredWorld, EntityRef, EntityWorldMut, World},
 };
-use ustr::Ustr;
+use estr::Estr;
 
 use super::{Props, Value};
 
@@ -24,7 +24,7 @@ pub trait PropsExt {
     /// Returns an immutable reference to a property value. If the property is
     /// of the wrong type or is not set, a reference to a default value will be
     /// returned instead.
-    fn get_prop<T>(&self, name: impl Into<Ustr>) -> T
+    fn get_prop<T>(&self, name: impl Into<Estr>) -> T
     where
         T: From<Value> + Default + 'static,
     {
@@ -79,7 +79,7 @@ pub trait PropsMutExt {
     /// Returns a mutable reference to a property value. If the propety value is
     /// of the wrong type or not set, a default value of the correct type will
     /// be inserted.
-    fn get_prop_mut<T>(&mut self, name: impl Into<Ustr>) -> &mut T
+    fn get_prop_mut<T>(&mut self, name: impl Into<Estr>) -> &mut T
     where
         Value: AsMut<T>,
     {
@@ -106,22 +106,22 @@ impl<'w> PropsMutExt for EntityWorldMut<'w> {
 /// [`World`] and [`EntityWorldMut`].
 pub trait PropCommandsExt {
     /// Sets a property assoceated with this object.
-    fn set_prop(&mut self, name: impl Into<Ustr>, value: impl Into<Value>) -> &mut Self;
+    fn set_prop(&mut self, name: impl Into<Estr>, value: impl Into<Value>) -> &mut Self;
 
     /// Removes a property from this object.
-    fn remove_prop(&mut self, name: impl Into<Ustr>) -> &mut Self;
+    fn remove_prop(&mut self, name: impl Into<Estr>) -> &mut Self;
 
     /// Clears all properties on this object.
     fn clear_props(&mut self) -> &mut Self;
 }
 
 impl<P: PropsMutExt> PropCommandsExt for P {
-    fn set_prop(&mut self, name: impl Into<Ustr>, value: impl Into<Value>) -> &mut Self {
+    fn set_prop(&mut self, name: impl Into<Estr>, value: impl Into<Value>) -> &mut Self {
         self.props_mut().set(name, value);
         self
     }
 
-    fn remove_prop(&mut self, name: impl Into<Ustr>) -> &mut Self {
+    fn remove_prop(&mut self, name: impl Into<Estr>) -> &mut Self {
         self.props_mut().remove(name);
         self
     }
@@ -133,7 +133,7 @@ impl<P: PropsMutExt> PropCommandsExt for P {
 }
 
 impl<'w, 's> PropCommandsExt for Commands<'w, 's> {
-    fn set_prop(&mut self, name: impl Into<Ustr>, value: impl Into<Value>) -> &mut Self {
+    fn set_prop(&mut self, name: impl Into<Estr>, value: impl Into<Value>) -> &mut Self {
         let name = name.into();
         let value = value.into();
         self.queue(move |world: &mut World| {
@@ -142,7 +142,7 @@ impl<'w, 's> PropCommandsExt for Commands<'w, 's> {
         self
     }
 
-    fn remove_prop(&mut self, name: impl Into<Ustr>) -> &mut Self {
+    fn remove_prop(&mut self, name: impl Into<Estr>) -> &mut Self {
         let name = name.into();
         self.queue(move |world: &mut World| {
             world.remove_prop(name);
@@ -159,7 +159,7 @@ impl<'w, 's> PropCommandsExt for Commands<'w, 's> {
 }
 
 impl<'a> PropCommandsExt for EntityCommands<'a> {
-    fn set_prop(&mut self, name: impl Into<Ustr>, value: impl Into<Value>) -> &mut Self {
+    fn set_prop(&mut self, name: impl Into<Estr>, value: impl Into<Value>) -> &mut Self {
         let name = name.into();
         let value = value.into();
         self.queue(move |mut entity: EntityWorldMut| {
@@ -168,7 +168,7 @@ impl<'a> PropCommandsExt for EntityCommands<'a> {
         self
     }
 
-    fn remove_prop(&mut self, name: impl Into<Ustr>) -> &mut Self {
+    fn remove_prop(&mut self, name: impl Into<Estr>) -> &mut Self {
         let name = name.into();
         self.queue(move |mut entity: EntityWorldMut| {
             entity.remove_prop(name);

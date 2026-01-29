@@ -1,33 +1,33 @@
 //! Defines extension traits for using the registry with bevy
 
 use bevy_ecs::{
-    entity::{Entity, EntityDoesNotExistError, EntityHashSet},
+    entity::{Entity, EntityHashSet, EntityNotSpawnedError},
     system::EntityCommands,
     world::{
-        DeferredWorld, EntityMut, EntityRef, EntityWorldMut, World, WorldEntityFetch,
-        error::EntityMutableFetchError, unsafe_world_cell::UnsafeWorldCell,
+        error::EntityMutableFetchError, unsafe_world_cell::UnsafeWorldCell, DeferredWorld,
+        EntityMut, EntityRef, EntityWorldMut, World, WorldEntityFetch,
     },
 };
+use estr::Estr;
 use thiserror::Error;
-use ustr::Ustr;
 
-use super::{Class, EMPTY_SET, EntityNotFoundError, Identity, Registry};
+use super::{Class, EntityNotFoundError, Identity, Registry, EMPTY_SET};
 
 // -----------------------------------------------------------------------------
 // Registry Access
 
 pub trait RegistryExt {
-    fn get_name(&self) -> Option<Ustr>;
+    fn get_name(&self) -> Option<Estr>;
 
-    fn get_class(&self) -> Option<Ustr>;
+    fn get_class(&self) -> Option<Estr>;
 }
 
 impl<'w> RegistryExt for EntityRef<'w> {
-    fn get_name(&self) -> Option<Ustr> {
+    fn get_name(&self) -> Option<Estr> {
         self.get::<Identity>().map(|i| i.0)
     }
 
-    fn get_class(&self) -> Option<Ustr> {
+    fn get_class(&self) -> Option<Estr> {
         self.get::<Class>().map(|i| i.0)
     }
 }
@@ -36,27 +36,27 @@ impl<'w> RegistryExt for EntityRef<'w> {
 // Registry Mutation
 
 pub trait RegistryCommandsExt {
-    fn set_name(&mut self, name: impl Into<Ustr>) -> &mut Self;
+    fn set_name(&mut self, name: impl Into<Estr>) -> &mut Self;
 
-    fn set_class(&mut self, class: impl Into<Ustr>) -> &mut Self;
+    fn set_class(&mut self, class: impl Into<Estr>) -> &mut Self;
 }
 
 impl<'w> RegistryCommandsExt for EntityWorldMut<'w> {
-    fn set_name(&mut self, name: impl Into<Ustr>) -> &mut Self {
+    fn set_name(&mut self, name: impl Into<Estr>) -> &mut Self {
         self.insert(Identity::new(name))
     }
 
-    fn set_class(&mut self, class: impl Into<Ustr>) -> &mut Self {
+    fn set_class(&mut self, class: impl Into<Estr>) -> &mut Self {
         self.insert(Class::new(class))
     }
 }
 
 impl<'w> RegistryCommandsExt for EntityCommands<'w> {
-    fn set_name(&mut self, name: impl Into<Ustr>) -> &mut Self {
+    fn set_name(&mut self, name: impl Into<Estr>) -> &mut Self {
         self.insert(Identity::new(name))
     }
 
-    fn set_class(&mut self, class: impl Into<Ustr>) -> &mut Self {
+    fn set_class(&mut self, class: impl Into<Estr>) -> &mut Self {
         self.insert(Class::new(class))
     }
 }
@@ -68,17 +68,17 @@ impl<'w> RegistryCommandsExt for EntityCommands<'w> {
 #[error("{0}")]
 pub enum EntityNamedError {
     EntityNotFound(#[from] EntityNotFoundError),
-    EntityDoesNotExist(#[from] EntityDoesNotExistError),
+    EntityNotSpawned(#[from] EntityNotSpawnedError),
 }
 
 pub trait RegistryLookupExt {
-    fn lookup_name(&self, name: impl Into<Ustr>) -> Result<Entity, EntityNotFoundError>;
+    fn lookup_name(&self, name: impl Into<Estr>) -> Result<Entity, EntityNotFoundError>;
 
-    fn lookup_class(&self, class: impl Into<Ustr>) -> &EntityHashSet;
+    fn lookup_class(&self, class: impl Into<Estr>) -> &EntityHashSet;
 
-    fn entity_named(&self, name: impl Into<Ustr>) -> Result<EntityRef, EntityNamedError>;
+    fn entity_named(&self, name: impl Into<Estr>) -> Result<EntityRef<'_>, EntityNamedError>;
 
-    fn entity_class(&self, class: impl Into<Ustr>) -> EntityClassIter;
+    fn entity_class(&self, class: impl Into<Estr>) -> EntityClassIter<'_>;
 }
 
 pub struct EntityClassIter<'w> {
@@ -96,7 +96,7 @@ impl<'w> Iterator for EntityClassIter<'w> {
 }
 
 impl RegistryLookupExt for World {
-    fn lookup_name(&self, name: impl Into<Ustr>) -> Result<Entity, EntityNotFoundError> {
+    fn lookup_name(&self, name: impl Into<Estr>) -> Result<Entity, EntityNotFoundError> {
         if let Some(registry) = self.get_resource::<Registry>() {
             registry.lookup_name(name)
         } else {
@@ -104,7 +104,7 @@ impl RegistryLookupExt for World {
         }
     }
 
-    fn lookup_class(&self, class: impl Into<Ustr>) -> &EntityHashSet {
+    fn lookup_class(&self, class: impl Into<Estr>) -> &EntityHashSet {
         if let Some(registry) = self.get_resource::<Registry>() {
             registry.lookup_class(class)
         } else {
@@ -112,13 +112,13 @@ impl RegistryLookupExt for World {
         }
     }
 
-    fn entity_named(&self, name: impl Into<Ustr>) -> Result<EntityRef, EntityNamedError> {
+    fn entity_named(&self, name: impl Into<Estr>) -> Result<EntityRef<'_>, EntityNamedError> {
         let entity = self.lookup_name(name)?;
         let entity_ref = self.get_entity(entity)?;
         Ok(entity_ref)
     }
 
-    fn entity_class(&self, class: impl Into<Ustr>) -> EntityClassIter {
+    fn entity_class(&self, class: impl Into<Estr>) -> EntityClassIter<'_> {
         EntityClassIter {
             entities: self.lookup_class(class).clone().into_iter(),
             world: self,
@@ -127,7 +127,7 @@ impl RegistryLookupExt for World {
 }
 
 impl<'w> RegistryLookupExt for DeferredWorld<'w> {
-    fn lookup_name(&self, name: impl Into<Ustr>) -> Result<Entity, EntityNotFoundError> {
+    fn lookup_name(&self, name: impl Into<Estr>) -> Result<Entity, EntityNotFoundError> {
         if let Some(registry) = self.get_resource::<Registry>() {
             registry.lookup_name(name)
         } else {
@@ -135,7 +135,7 @@ impl<'w> RegistryLookupExt for DeferredWorld<'w> {
         }
     }
 
-    fn lookup_class(&self, class: impl Into<Ustr>) -> &EntityHashSet {
+    fn lookup_class(&self, class: impl Into<Estr>) -> &EntityHashSet {
         if let Some(registry) = self.get_resource::<Registry>() {
             registry.lookup_class(class)
         } else {
@@ -143,13 +143,13 @@ impl<'w> RegistryLookupExt for DeferredWorld<'w> {
         }
     }
 
-    fn entity_named(&self, name: impl Into<Ustr>) -> Result<EntityRef, EntityNamedError> {
+    fn entity_named(&self, name: impl Into<Estr>) -> Result<EntityRef<'_>, EntityNamedError> {
         let entity = self.lookup_name(name)?;
         let entity_ref = self.get_entity(entity)?;
         Ok(entity_ref)
     }
 
-    fn entity_class(&self, class: impl Into<Ustr>) -> EntityClassIter {
+    fn entity_class(&self, class: impl Into<Estr>) -> EntityClassIter<'_> {
         EntityClassIter {
             entities: self.lookup_class(class).clone().into_iter(),
             world: self,
@@ -170,10 +170,10 @@ pub enum EntityNamedMutError {
 pub trait RegistryLookupMutExt {
     fn entity_mut_named(
         &mut self,
-        name: impl Into<Ustr>,
-    ) -> Result<EntityWorldMut, EntityNamedMutError>;
+        name: impl Into<Estr>,
+    ) -> Result<EntityWorldMut<'_>, EntityNamedMutError>;
 
-    fn entity_mut_class(&mut self, class: impl Into<Ustr>) -> EntityClassMutIter;
+    fn entity_mut_class(&mut self, class: impl Into<Estr>) -> EntityClassMutIter<'_>;
 }
 
 pub struct EntityClassMutIter<'w> {
@@ -195,14 +195,14 @@ impl<'w> Iterator for EntityClassMutIter<'w> {
 impl RegistryLookupMutExt for World {
     fn entity_mut_named(
         &mut self,
-        name: impl Into<Ustr>,
-    ) -> Result<EntityWorldMut, EntityNamedMutError> {
+        name: impl Into<Estr>,
+    ) -> Result<EntityWorldMut<'_>, EntityNamedMutError> {
         let entity = self.lookup_name(name)?;
         let entity_mut = self.get_entity_mut(entity)?;
         Ok(entity_mut)
     }
 
-    fn entity_mut_class(&mut self, class: impl Into<Ustr>) -> EntityClassMutIter {
+    fn entity_mut_class(&mut self, class: impl Into<Estr>) -> EntityClassMutIter<'_> {
         EntityClassMutIter {
             entities: self.lookup_class(class).clone().into_iter(),
             world_cell: self.as_unsafe_world_cell(),
@@ -214,23 +214,25 @@ impl RegistryLookupMutExt for World {
 // Deferred mutable registry lookups
 
 pub trait RegistryLookupDeferredExt {
-    fn entity_mut_named(&mut self, name: impl Into<Ustr>)
-    -> Result<EntityMut, EntityNamedMutError>;
+    fn entity_mut_named(
+        &mut self,
+        name: impl Into<Estr>,
+    ) -> Result<EntityMut<'_>, EntityNamedMutError>;
 
-    fn entity_mut_class(&mut self, class: impl Into<Ustr>) -> EntityClassDeferredIter;
+    fn entity_mut_class(&mut self, class: impl Into<Estr>) -> EntityClassDeferredIter<'_>;
 }
 
 impl<'w> RegistryLookupDeferredExt for DeferredWorld<'w> {
     fn entity_mut_named(
         &mut self,
-        name: impl Into<Ustr>,
-    ) -> Result<EntityMut, EntityNamedMutError> {
+        name: impl Into<Estr>,
+    ) -> Result<EntityMut<'_>, EntityNamedMutError> {
         let entity = self.lookup_name(name)?;
         let entity_mut = self.get_entity_mut(entity)?;
         Ok(entity_mut)
     }
 
-    fn entity_mut_class(&mut self, class: impl Into<Ustr>) -> EntityClassDeferredIter {
+    fn entity_mut_class(&mut self, class: impl Into<Estr>) -> EntityClassDeferredIter<'_> {
         EntityClassDeferredIter {
             entities: self.lookup_class(class).clone().into_iter(),
             world_cell: self.as_unsafe_world_cell_readonly(),

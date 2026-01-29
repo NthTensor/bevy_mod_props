@@ -19,7 +19,7 @@ use bevy_ecs::{
     component::Component,
     entity::{Entity, EntityHashSet},
 };
-use ustr::{Ustr, UstrMap};
+use estr::{Estr, EstrMap};
 
 mod ext;
 pub use ext::*;
@@ -35,37 +35,37 @@ pub use ext::*;
 /// many-to-one or many-to-many links using [`add`][Links::add] and [`list`][Links::list].
 #[derive(Component, Default)]
 pub struct Links {
-    links: UstrMap<EntityHashSet>,
+    links: EstrMap<EntityHashSet>,
 }
 
 impl Links {
     /// Sets a link to a specific entity. The previous value of this link will be overwritten.
-    pub fn set(&mut self, name: impl Into<Ustr>, target: Entity) {
+    pub fn set(&mut self, name: impl Into<Estr>, target: Entity) {
         let link = self.links.entry(name.into()).or_default();
         link.clear();
         link.insert(target);
     }
 
     /// Adds a link to a specific entity. The same link can point to multiple entities.
-    pub fn add(&mut self, name: impl Into<Ustr>, target: Entity) {
+    pub fn add(&mut self, name: impl Into<Estr>, target: Entity) {
         let link = self.links.entry(name.into()).or_default();
         link.insert(target);
     }
 
     /// Removes an entity from a link.
-    pub fn remove(&mut self, name: impl Into<Ustr>, target: Entity) {
+    pub fn remove(&mut self, name: impl Into<Estr>, target: Entity) {
         let link = self.links.entry(name.into()).or_default();
         link.remove(&target);
     }
 
     /// Clears the value of a link.
-    pub fn clear(&mut self, name: impl Into<Ustr>) {
+    pub fn clear(&mut self, name: impl Into<Estr>) {
         let link = self.links.entry(name.into()).or_default();
         link.clear();
     }
 
     /// Returns true if the entity is linked under this name.
-    pub fn is_linked(&self, name: impl Into<Ustr>, entity: Entity) -> bool {
+    pub fn is_linked(&self, name: impl Into<Estr>, entity: Entity) -> bool {
         if let Some(link) = self.links.get(&name.into()) {
             link.contains(&entity)
         } else {
@@ -75,7 +75,7 @@ impl Links {
 
     /// Returns the linked entity. If the link points to multiple entities,
     /// any of them may be returned (which is explicetly left undefined).
-    pub fn get(&self, name: impl Into<Ustr>) -> Option<Entity> {
+    pub fn get(&self, name: impl Into<Estr>) -> Option<Entity> {
         self.links
             .get(&name.into())
             .and_then(|entities| entities.iter().next())
@@ -84,7 +84,7 @@ impl Links {
 
     /// Returns all linked entities. If the link points to multiple entities,
     /// all will be returned.
-    pub fn list(&self, name: impl Into<Ustr>) -> EntityHashSet {
+    pub fn list(&self, name: impl Into<Estr>) -> EntityHashSet {
         self.links
             .get(&name.into())
             .cloned()

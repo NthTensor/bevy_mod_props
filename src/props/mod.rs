@@ -31,7 +31,7 @@
 //!
 //! // mutable access is also possible
 //! let str_prop = props.get_mut("str_prop");
-//! *str_prop = Ustr::from("hello world");
+//! *str_prop = Estr::from("hello world");
 //! props["prop_2"] -= 32.0;
 //!
 //! // mutable access inserts a default if the value dosn't exist or is the wrong type, then returns a reference
@@ -84,7 +84,7 @@ use std::sync::LazyLock;
 
 use bevy_ecs::component::Component;
 use bevy_ecs::resource::Resource;
-use ustr::Ustr;
+use estr::Estr;
 
 mod ext;
 pub use ext::*;
@@ -139,7 +139,7 @@ pub use ext::*;
 pub enum Value {
     Bool(bool),
     Num(f32),
-    Str(Ustr),
+    Str(Estr),
 }
 
 // -----------------------------------------------------------------------------
@@ -159,7 +159,7 @@ impl fmt::Display for Value {
         match self {
             Value::Bool(bool) => write!(f, "{bool}"),
             Value::Num(num) => write!(f, "{num}"),
-            Value::Str(ustr) => write!(f, "{ustr}"),
+            Value::Str(estr) => write!(f, "{estr}"),
         }
     }
 }
@@ -278,13 +278,13 @@ impl From<Value> for String {
     }
 }
 
-impl From<Ustr> for Value {
-    fn from(value: Ustr) -> Self {
+impl From<Estr> for Value {
+    fn from(value: Estr) -> Self {
         Value::Str(value)
     }
 }
 
-impl From<Value> for Option<Ustr> {
+impl From<Value> for Option<Estr> {
     fn from(value: Value) -> Self {
         match value {
             Value::Str(str) => Some(str),
@@ -293,7 +293,7 @@ impl From<Value> for Option<Ustr> {
     }
 }
 
-impl From<Value> for Ustr {
+impl From<Value> for Estr {
     fn from(value: Value) -> Self {
         Option::from(value).unwrap_or_default()
     }
@@ -320,13 +320,13 @@ impl AsRef<f32> for Value {
     }
 }
 
-static EMPTY_USTR: LazyLock<Ustr> = LazyLock::new(|| Ustr::from(""));
+static EMPTY_ESTR: LazyLock<Estr> = LazyLock::new(|| Estr::from(""));
 
-impl AsRef<Ustr> for Value {
-    fn as_ref(&self) -> &Ustr {
+impl AsRef<Estr> for Value {
+    fn as_ref(&self) -> &Estr {
         match self {
             Value::Str(str) => str,
-            _ => &EMPTY_USTR,
+            _ => &EMPTY_ESTR,
         }
     }
 }
@@ -367,12 +367,12 @@ impl AsMut<f32> for Value {
     }
 }
 
-impl AsMut<Ustr> for Value {
-    fn as_mut(&mut self) -> &mut Ustr {
+impl AsMut<Estr> for Value {
+    fn as_mut(&mut self) -> &mut Estr {
         match self {
             Value::Str(str) => str,
             _ => {
-                *self = Value::Str(Ustr::from(""));
+                *self = Value::Str(Estr::from(""));
                 let Value::Str(str) = self else {
                     unreachable!();
                 };
@@ -430,7 +430,7 @@ impl PartialEq<Value> for f32 {
 impl PartialEq<&str> for Value {
     fn eq(&self, other: &&str) -> bool {
         match self {
-            Value::Str(this) => *this == Ustr::from(other),
+            Value::Str(this) => *this == Estr::from(other),
             _ => false,
         }
     }
@@ -439,7 +439,7 @@ impl PartialEq<&str> for Value {
 impl PartialEq<Value> for &str {
     fn eq(&self, other: &Value) -> bool {
         match other {
-            Value::Str(that) => *self == Ustr::from(that),
+            Value::Str(that) => *self == Estr::from(that),
             _ => false,
         }
     }
@@ -448,7 +448,7 @@ impl PartialEq<Value> for &str {
 impl PartialEq<String> for Value {
     fn eq(&self, other: &String) -> bool {
         match self {
-            Value::Str(this) => *this == Ustr::from(other),
+            Value::Str(this) => *this == Estr::from(other),
             _ => false,
         }
     }
@@ -457,14 +457,14 @@ impl PartialEq<String> for Value {
 impl PartialEq<Value> for String {
     fn eq(&self, other: &Value) -> bool {
         match other {
-            Value::Str(that) => *self == Ustr::from(that),
+            Value::Str(that) => *self == Estr::from(that),
             _ => false,
         }
     }
 }
 
-impl PartialEq<Ustr> for Value {
-    fn eq(&self, other: &Ustr) -> bool {
+impl PartialEq<Estr> for Value {
+    fn eq(&self, other: &Estr) -> bool {
         match self {
             Value::Str(this) => this == other,
             _ => false,
@@ -472,7 +472,7 @@ impl PartialEq<Ustr> for Value {
     }
 }
 
-impl PartialEq<Value> for Ustr {
+impl PartialEq<Value> for Estr {
     fn eq(&self, other: &Value) -> bool {
         match other {
             Value::Str(that) => self == that,
@@ -533,8 +533,8 @@ impl PartialOrd<Value> for f32 {
     }
 }
 
-impl PartialOrd<Ustr> for Value {
-    fn partial_cmp(&self, that: &Ustr) -> Option<std::cmp::Ordering> {
+impl PartialOrd<Estr> for Value {
+    fn partial_cmp(&self, that: &Estr) -> Option<std::cmp::Ordering> {
         match self {
             Value::Str(this) => this.partial_cmp(that),
             _ => None,
@@ -542,7 +542,7 @@ impl PartialOrd<Ustr> for Value {
     }
 }
 
-impl PartialOrd<Value> for Ustr {
+impl PartialOrd<Value> for Estr {
     fn partial_cmp(&self, other: &Value) -> Option<std::cmp::Ordering> {
         match other {
             Value::Str(that) => self.partial_cmp(that),
@@ -788,7 +788,7 @@ impl DivAssign<Value> for Value {
 /// correct type. For example, toggling a
 #[derive(Component, Resource, Default, Clone, Debug)]
 pub struct Props {
-    properties: BTreeMap<Ustr, Value>,
+    properties: BTreeMap<Estr, Value>,
 }
 
 impl Props {
@@ -799,14 +799,14 @@ impl Props {
     }
 
     /// Gets the given key’s corresponding entry in the map for in-place manipulation.
-    pub fn entry(&mut self, name: impl Into<Ustr>) -> Entry<Ustr, Value> {
+    pub fn entry(&mut self, name: impl Into<Estr>) -> Entry<'_, Estr, Value> {
         self.properties.entry(name.into())
     }
 
     /// Returns an immutable reference to a property value. If the property is
     /// of the wrong type or is not set, a reference to a default value will be
     /// returned instead.
-    pub fn get<T>(&self, name: impl Into<Ustr>) -> T
+    pub fn get<T>(&self, name: impl Into<Estr>) -> T
     where
         T: From<Value> + Default + 'static,
     {
@@ -820,7 +820,7 @@ impl Props {
     /// Returns a mutable reference to a property value. If the propety value is
     /// of the wrong type or not set, a default value of the correct type will
     /// be inserted.
-    pub fn get_mut<T>(&mut self, name: impl Into<Ustr>) -> &mut T
+    pub fn get_mut<T>(&mut self, name: impl Into<Estr>) -> &mut T
     where
         Value: AsMut<T>,
     {
@@ -828,19 +828,19 @@ impl Props {
     }
 
     /// Sets a property value.
-    pub fn set(&mut self, name: impl Into<Ustr>, value: impl Into<Value>) {
+    pub fn set(&mut self, name: impl Into<Estr>, value: impl Into<Value>) {
         self.properties.insert(name.into(), value.into());
     }
 
     /// Sets a property value, and can be chained.
-    pub fn with(mut self, name: impl Into<Ustr>, value: impl Into<Value>) -> Self {
+    pub fn with(mut self, name: impl Into<Estr>, value: impl Into<Value>) -> Self {
         self.set(name, value);
         self
     }
 
     ////Removes a property. Subsiquently accessing this property with `get` or
     /// `get_mut` will return a default value.
-    pub fn remove(&mut self, name: impl Into<Ustr>) {
+    pub fn remove(&mut self, name: impl Into<Estr>) {
         self.properties.remove(&name.into());
     }
 
@@ -850,39 +850,39 @@ impl Props {
     }
 
     /// Creates a borrowing iterator over all property names and values.
-    pub fn iter(&self) -> Iter<Ustr, Value> {
+    pub fn iter(&self) -> Iter<'_, Estr, Value> {
         self.properties.iter()
     }
 
     /// Creates a borrowing iterator over property names.
-    pub fn keys(&self) -> Keys<Ustr, Value> {
+    pub fn keys(&self) -> Keys<'_, Estr, Value> {
         self.properties.keys()
     }
 
     /// Creates a consuming iterator over property names.
-    pub fn into_keys(self) -> IntoKeys<Ustr, Value> {
+    pub fn into_keys(self) -> IntoKeys<Estr, Value> {
         self.properties.into_keys()
     }
 
     /// Creates a borrowing iterator over property values.
-    pub fn values(&self) -> Values<Ustr, Value> {
+    pub fn values(&self) -> Values<'_, Estr, Value> {
         self.properties.values()
     }
 
     /// Creates a consuming iterator over property values.
-    pub fn into_values(self) -> IntoValues<Ustr, Value> {
+    pub fn into_values(self) -> IntoValues<Estr, Value> {
         self.properties.into_values()
     }
 
     /// Creates a mutable borrowing iterator over property values.
-    pub fn values_mut(&mut self) -> ValuesMut<Ustr, Value> {
+    pub fn values_mut(&mut self) -> ValuesMut<'_, Estr, Value> {
         self.properties.values_mut()
     }
 }
 
 static DEFAULT_VALUE: LazyLock<Value> = LazyLock::new(Value::default);
 
-impl<S: Into<Ustr>> Index<S> for Props {
+impl<S: Into<Estr>> Index<S> for Props {
     type Output = Value;
 
     fn index(&self, index: S) -> &Self::Output {
@@ -890,15 +890,15 @@ impl<S: Into<Ustr>> Index<S> for Props {
     }
 }
 
-impl<S: Into<Ustr>> IndexMut<S> for Props {
+impl<S: Into<Estr>> IndexMut<S> for Props {
     fn index_mut(&mut self, index: S) -> &mut Self::Output {
         self.get_mut(index)
     }
 }
 
 impl IntoIterator for Props {
-    type Item = (Ustr, Value);
-    type IntoIter = IntoIter<Ustr, Value>;
+    type Item = (Estr, Value);
+    type IntoIter = IntoIter<Estr, Value>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.properties.into_iter()

@@ -7,3 +7,4 @@ This crate adds several utilities to bevy, with a focus on stringly-typed inform
 | `bevy`  | `bevy_mod_props` |
 |:-------:|:----------------:|
 | 0.17    | 1.0.0            |
+| 0.18    | 2.0.0            |
