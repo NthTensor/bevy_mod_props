@@ -4,14 +4,14 @@ use bevy_ecs::{
     entity::{Entity, EntityHashSet, EntityNotSpawnedError},
     system::EntityCommands,
     world::{
-        error::EntityMutableFetchError, unsafe_world_cell::UnsafeWorldCell, DeferredWorld,
-        EntityMut, EntityRef, EntityWorldMut, World, WorldEntityFetch,
+        DeferredWorld, EntityMut, EntityRef, EntityWorldMut, World, WorldEntityFetch,
+        error::EntityMutableFetchError, unsafe_world_cell::UnsafeWorldCell,
     },
 };
 use estr::Estr;
 use thiserror::Error;
 
-use super::{Class, EntityNotFoundError, Identity, Registry, EMPTY_SET};
+use super::{Class, EMPTY_SET, EntityNotFoundError, Identity, Registry};
 
 // -----------------------------------------------------------------------------
 // Registry Access

@@ -151,9 +151,6 @@ impl<'w> LinksFollowExt<'w> for EntityWorldMut<'w> {
     fn explore_link(self, name: impl Into<Estr>) -> EntityHashMap<EntityMut<'w>> {
         let targets = self.list_linked(name);
         let world = self.into_world_mut();
-        match world.get_entity_mut(&targets) {
-            Ok(entities) => entities,
-            Err(_) => EntityHashMap::default(),
-        }
+        world.get_entity_mut(&targets).unwrap_or_default()
     }
 }

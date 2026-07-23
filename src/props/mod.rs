@@ -1,8 +1,9 @@
 //! Adds named properties to entities.
 //!
 //! This module is all about the [`Props`] type; you can think of this as being
-//! basically a mapping `String => bool | f32 | String` which can be used
-//! as either a component or a resource.
+//! basically a mapping `String => bool | f32 | String`. Props is itself a
+//! component, so it can be attached directly to individual entities, or stored
+//! world-wide with the [`GlobalProps`] resource.
 //!
 //! ```rust
 //! # use bevy_mod_props::prelude::*;
@@ -42,19 +43,19 @@
 //! Props are designed to be easy to read and write, and generally prioritizes
 //! ergonomics over explicet error handling.
 //!
-//! # Extention Traits
+//! # Extension Traits
 //!
-//! Props can be set globally (by using `Props` as a resource) or
-//! on specific entities (by using. `Props` component). A number of extention
-//! traits are avalible to allow props to be modified from the world, entity
-//! refs, or commands
+//! Props can be set globally (by using the [`GlobalProps`] resource) or on
+//! specific entities (by using [`Props`] as a component). A number of
+//! extension traits are available to allow props to be modified from the
+//! world, entity refs, or commands
 //!
 //! ```rust
 //! # use bevy_mod_props::prelude::*;
 //! # use bevy_ecs::prelude::*;
 //! #
 //! # fn foo(thingy: f32) { }
-//! fn global_props_resource_system(props: Res<Props>) {
+//! fn global_props_resource_system(props: Res<GlobalProps>) {
 //!     let thingy = props.get("thingy");
 //!     foo(thingy);
 //! }
@@ -79,7 +80,10 @@
 
 use std::collections::btree_map::*;
 use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Deref, DerefMut, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub,
+    SubAssign,
+};
 use std::sync::LazyLock;
 
 use bevy_ecs::component::Component;
@@ -776,17 +780,28 @@ impl DivAssign<Value> for Value {
 // -----------------------------------------------------------------------------
 // Property Maps
 
-/// A simple key-value property store, accessable either as a component or a
-/// resource.
+/// A simple key-value property store.
 ///
 /// Properties have string keys and either boolean, numeric, or string
-/// values. It is often more convivient to work through the extension traits
-/// [`PropsExt`], [`PropsMutExt`], and [`PropCommandsExt`].
+/// values. `Props` is a component, so it can be attached directly to
+/// entities; to store props world-wide, wrap them in the [`GlobalProps`]
+/// resource. It is often more convenient to work through the extension
+/// traits [`PropsExt`], [`PropsMutExt`], and [`PropCommandsExt`].
 ///
 /// When accessing a property, if a value has not been set or has the wrong
 /// type, the property should be treated as if it has the default value of the
-/// correct type. For example, toggling a
-#[derive(Component, Resource, Default, Clone, Debug)]
+/// correct type.
+///
+/// ```rust
+/// # use bevy_ecs::prelude::*;
+/// # use bevy_mod_props::prelude::*;
+/// # let mut world = World::new();
+/// let entity = world
+///     .spawn(Props::new().with("health", 100.0))
+///     .id();
+/// assert_eq!(world.entity(entity).get_prop::<f32>("health"), 100.0);
+/// ```
+#[derive(Component, Default, Clone, Debug)]
 pub struct Props {
     properties: BTreeMap<Estr, Value>,
 }
@@ -902,5 +917,52 @@ impl IntoIterator for Props {
 
     fn into_iter(self) -> Self::IntoIter {
         self.properties.into_iter()
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ECS Wrappers
+
+/// [`Props`] stored world-wide, as a resource.
+///
+/// Bevy requires components and resources to be distinct types (as of bevy
+/// `v0.19`, `Resource` implies `Component`), so this wraps [`Props`] rather
+/// than using it directly. It dereferences to [`Props`], and is usually
+/// accessed through the extension traits [`PropsExt`], [`PropsMutExt`], and
+/// [`PropCommandsExt`] rather than directly.
+///
+/// ```rust
+/// # use bevy_ecs::prelude::*;
+/// # use bevy_mod_props::prelude::*;
+/// # let mut world = World::new();
+/// world.insert_resource(GlobalProps(Props::new().with("difficulty", 2.0)));
+/// assert_eq!(world.get_prop::<f32>("difficulty"), 2.0);
+/// ```
+#[derive(Resource, Default, Clone, Debug)]
+pub struct GlobalProps(pub Props);
+
+impl Deref for GlobalProps {
+    type Target = Props;
+
+    fn deref(&self) -> &Props {
+        &self.0
+    }
+}
+
+impl DerefMut for GlobalProps {
+    fn deref_mut(&mut self) -> &mut Props {
+        &mut self.0
+    }
+}
+
+impl From<Props> for GlobalProps {
+    fn from(props: Props) -> GlobalProps {
+        GlobalProps(props)
+    }
+}
+
+impl From<GlobalProps> for Props {
+    fn from(props: GlobalProps) -> Props {
+        props.0
     }
 }

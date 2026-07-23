@@ -79,7 +79,7 @@ pub struct EntityNotFoundError {
 #[derive(Component, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[component(immutable)]
 #[component(on_insert = Identity::on_insert)]
-#[component(on_replace = Identity::on_replace)]
+#[component(on_discard = Identity::on_discard)]
 pub struct Identity(Estr);
 
 impl Identity {
@@ -96,7 +96,7 @@ impl Identity {
                 if owner != context.entity {
                     // The name is already in use by a different entity, remove the component and return an error
                     world.commands().entity(context.entity).remove::<Identity>();
-                    let error_handler = world.default_error_handler();
+                    let error_handler = world.fallback_error_handler();
                     error_handler(
                         NameTakenError {
                             name,
@@ -124,7 +124,7 @@ impl Identity {
                     if owner != context.entity {
                         // The name is already in use by a different entity, remove the component and return an error
                         world.commands().entity(context.entity).remove::<Identity>();
-                        let error_handler = world.default_error_handler();
+                        let error_handler = world.fallback_error_handler();
                         error_handler(
                             NameTakenError {
                                 name,
@@ -147,7 +147,7 @@ impl Identity {
         }
     }
 
-    fn on_replace(mut world: DeferredWorld, context: HookContext) {
+    fn on_discard(mut world: DeferredWorld, context: HookContext) {
         let Identity(name) = *world.entity(context.entity).get::<Identity>().unwrap();
         if let Some(mut registry) = world.get_resource_mut::<Registry>() {
             if let Some(registration) = registry.reigrations.get_mut(&context.entity) {
@@ -188,7 +188,7 @@ impl Deref for Identity {
 #[derive(Component, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[component(immutable)]
 #[component(on_insert = Class::on_insert)]
-#[component(on_replace = Class::on_replace)]
+#[component(on_discard = Class::on_discard)]
 pub struct Class(Estr);
 
 impl Class {
@@ -220,7 +220,7 @@ impl Class {
         }
     }
 
-    fn on_replace(mut world: DeferredWorld, context: HookContext) {
+    fn on_discard(mut world: DeferredWorld, context: HookContext) {
         let Class(class) = *world.entity(context.entity).get::<Class>().unwrap();
         if let Some(mut registry) = world.get_resource_mut::<Registry>() {
             registry.reigrations.get_mut(&context.entity).unwrap().class = None;
